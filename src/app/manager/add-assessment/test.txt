@@ -1,0 +1,29 @@
+
+model Assessment {
+  id          Int        @id @default(autoincrement())
+  title       String
+  description String?    // Optional description of the assessment
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  questions   Question[]
+}
+
+model Question {
+  id             Int        @id @default(autoincrement())
+  assessmentId   Int
+  questionText   String
+  questionType   QuestionType // Enum for different types (e.g., MULTIPLE_CHOICE, TRUE_FALSE, etc.)
+  options        String[]    // For multiple choice questions, store options as a string array
+  correctAnswer  String?     // Store correct answer (if applicable)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  assessment     Assessment  @relation(fields: [assessmentId], references: [id])
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  SHORT_ANSWER
+  LONG_ANSWER
+}

@@ -1,0 +1,121 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id              String          @id @default(cuid())
+  householdNumber String          @unique
+  name            String?
+  email           String?         @unique
+  emailVerified   DateTime?
+  image           String?
+  isArchived      Boolean         @default(false)
+  password        String?         @default("!def@ult")
+  role            ROLE            @default(USER)
+  sessions        Session[]
+  authenticator   Authenticator[] // Optional for WebAuthn support
+
+  assessments Assessment[] // One-to-many relation with Assessment
+  answers     Answer[] // One-to-many relation with Answer
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+// Optional for WebAuthn support
+model Authenticator {
+  credentialID         String  @unique
+  userId               String
+  providerAccountId    String
+  credentialPublicKey  String
+  counter              Int
+  credentialDeviceType String
+  credentialBackedUp   Boolean
+  transports           String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, credentialID])
+}
+
+enum ROLE {
+  USER
+  ADMIN
+  MANAGER
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  TEXT
+}
+
+enum AssessmentStat {
+  PUBLISHED
+  DRAFT
+  ARCHIVED
+}
+
+
+model Assessment {
+  id          String           @id @default(cuid())
+  title       String
+  description String? // Optional description of the assessment
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  userId      String // Reference to the User who created or is taking the assessment
+  questions   Question[] // One-to-many relation with Question
+  answers     Answer[] // One-to-many relation with Answer
+  status      AssessmentStat @default(DRAFT)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Question {
+  id          String           @id @default(cuid())
+  assessmentId String
+  questionText String
+  questionType QuestionType
+  options      String[] // For multiple choice questions, store options as a string array
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  answers    Answer[] // One-to-many relation with Answer
+}
+
+model Answer {
+  id           String   @id @default(cuid())
+  assessmentId String
+  questionId   String
+  userId       String // Reference to the User who provided the answer
+  response     String // User's answer
+  createdAt    DateTime @default(now())
+
+  assessment Assessment @relation(fields: [assessmentId], references: [id])
+  question   Question   @relation(fields: [questionId], references: [id])
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
